@@ -1,0 +1,71 @@
+// Minds Like Ours (Brooke-Wilson & Tenenbaum), Listing 2
+// The repaired model: the ice may have been modified to reduce its friction.
+// Run by pasting into the editor at https://webppl.org
+
+var g = 9.8;          // acceleration due to gravity (m/s^2)
+var center = 34.75;   // distance to the center target on the ice (m)
+
+// travelDist returns the distribution object so it can be observed
+var travelDist = function(push, mu, sweep) {
+  var mu_eff = sweep ? 0.9 * mu : mu;                 // sweeping lowers friction
+  var distance = (push * push) / (2 * g * mu_eff);    // stopping distance of a sliding stone
+  return Gaussian({mu: distance, sigma: 0.5});        // small unevenness in the ice
+};
+
+var travel = function(push, mu, sweep) {
+  return sample(travelDist(push, mu, sweep));
+};
+
+var Ks = mapN(function(i) { return 0.7 + 0.005 * i; }, 81);   // candidate values of an adjustment factor K
+
+var listing2 = Infer({method: 'rejection', samples: 1000, incremental: true}, function() {
+  var mu = gaussian(0.015, 0.001);          // same model as before...
+  var push_base = gaussian(3.2, 0.05);      // ...
+
+  var ice_change = uniform(0.5, 1);         // ice modification factor, as a fraction of friction
+  var mu_now = ice_change * mu;
+
+  var push1 = gaussian(push_base, 0.3);     // first team's throw
+  var push2 = gaussian(push_base, 0.3);     // next team's throw...
+  var push3 = gaussian(push_base, 0.3);     // ...and the first team's response
+  observe(travelDist(push1, mu_now, false), 42);
+  observe(travelDist(push2, mu_now, false), 45);
+  observe(travelDist(push3, mu_now, false), 44);
+
+  var on_center = function(K) { return Math.abs(travel(K * push_base, mu_now, false) - center) < 1; };
+  return {
+    ratio: push1 / push_base,
+    ice_change: ice_change,
+    friction: mu,
+    on_center: map(on_center, Ks)};
+});
+
+var ratioDist = marginalize(listing2, 'ratio');
+print("Inferred ratio of first push speed to usual speed: " + expectation(ratioDist));
+viz(ratioDist);
+
+var frictionDist = marginalize(listing2, 'friction');
+print("Inferred friction coefficient: " + expectation(frictionDist));
+viz(frictionDist);
+
+var ice_changeDist = marginalize(listing2, 'ice_change');
+print("Inferred modification to the friction of the ice: " + expectation(ice_changeDist));
+viz(ice_changeDist);
+
+// choose K to maximize P(on_center(K))
+var P = mapIndexed(function(i, K) {
+  return expectation(listing2, function(s) { return s.on_center[i] ? 1 : 0; });
+}, Ks);
+var best_K = Ks[_.indexOf(P, _.max(P))];
+
+// Print the best value of K
+print("Best value of K: " + best_K);
+
+// Visualize the probability of a successful push as a function of K
+viz.line(Ks, P, {
+  options: {
+    title: "Probability of Successful Push vs. K",
+    xLabel: "Adjustment Factor K",
+    yLabel: "Probability of Stopping within 1m of Center"
+  }
+});

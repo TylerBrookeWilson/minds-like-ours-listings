@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "Minds Like Ours: curling listings (WebPPL)"
+authors:
+  - family-names: Brooke-Wilson
+    given-names: Tyler
+    affiliation: Yale University
+  - family-names: Tenenbaum
+    given-names: Joshua B.
+    affiliation: Massachusetts Institute of Technology
+license: MIT
+version: "1.0.0"
+date-released: "2026-10-12"
+keywords:
+  - probabilistic programming
+  - WebPPL
+  - model synthesis
+  - cognitive science
